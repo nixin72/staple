@@ -36,20 +36,97 @@
 ;; you can better control where they are.
 ;; 
 ;; For example, if we have 4 buffers named buffer-1 through buffer-4, and the
-;; following layout: 
+;; following layout:
+;; +--------------------------+--------------------------+
+;; | Window-1                 | Window-2                 |
+;; |                          |                          |
+;; |                          |                          |
+;; |                          |                          |
+;; |                          |                          |
+;; |                          |                          |
+;; |                          |                          |
+;; |  Buffer-1 contents here  |  Buffer-3 contents here  |
+;; |                          |                          |
+;; |                          |                          |
+;; |                          |                          |
+;; |                          |                          |
+;; |                          |                          |
+;; |                          |                          |
+;; |                          |                          |
+;; |                          |                          |
+;; +--------------------------+--------------------------+
+;;
+;; Then the normal behaviour for `previous-buffer' when in Window-1 would be to
+;; cycle back to buffer-4.
+;;
+;; However, if buffer-1 and 2 are stapled to window-1, and buffer-3 and 4 are
+;; stapled to window-2, then `staple-previous-buffer' in window-1 would cycle
+;; back to buffer-2 instead of buffer-4.
+;;
+;; If you were in window-2, the same behaviour applies. If your current buffer
+;; is buffer-3, and you call `staple-previous-buffer' in window-2, then
+;; buffer-4 will become the selected buffer.
+;;
+;; Without being explicit, you cannot have a single buffer available in multiple
+;; windows. If you call `staple-copy-buffer-to-window', then you can staple the
+;; buffer to additional windows and have it cycle through in those windows.
+;;
+;;
+;; In addition to this, it also provides any special buffers with their own
+;; window. This way, when cycling through buffers in a file window, you won't
+;; need to cycle through your compilation or dired buffers for example. Like in
+;; a modern editor, you can have a dedicated space for that in a window across
+;; the bottom of the frame for example:
+;;
+;; +--------------------------+--------------------------+
+;; | Window-1                 | Window-2                 |
+;; |                          |                          |
+;; |                          |                          |
+;; |                          |                          |
+;; |                          |                          |
+;; |  Buffer-1 contents here  |  Buffer-3 contents here  |
+;; |                          |                          |
+;; |                          |                          |
+;; |                          |                          |
+;; |                          |                          |
+;; |                          |                          |
+;; +--------------------------+--------------------------+
+;; | Special window-3                                    |
+;; |                                                     |
+;; |       Special buffers, like term go down here       |
+;; |                                                     |
+;; |                                                     |
+;; +--------------------------+--------------------------+
+;;
+;; That window can be docked to the whichever side of the frame you prefer,
+;; again, like in most modern text editors. If you'd like that on the right-hand
+;; side, you simply need to change the value of the `staple-special-window-side'
+;; variable to 'right.
 ;;
 ;;; Code:
 
 (require 'cl-lib)
 
+;;;###autoload
+(define-minor-mode staple-mode
+  ""
+  :init-value nil
+  :global t
+  (if staple-mode
+      (staple--exit)
+      (staple--init)))
+
 ;;; Customization options
 (defgroup staple nil
-  "Customization options for staple-mode."
+  "Customization options for `staple-mode'."
   :group 'environment)
 
-(defcustom staple-init-multiple-window-strategy 'split-50/50
-  "When staple-mode start and there are multiple windows open, how do we divide 
-these buffers among the windows?
+(defcustom staple-init-multiple-window-strategy 'split-evenly
+  "Sorting method to use when command `staple-mode' is called.
+
+These strategies are used when command `staple-mode' starts and theres more than
+one window open, so this helps dictate how to staple the existing file buffers
+to the given window.
 
 Possible values:
 - split-evenly
@@ -86,10 +163,10 @@ See Info node `(emacs) Regexps' or Info node `(elisp) Regular Expressions'"
 ;;; Private variables
 
 (defvar staple--special-buffers '()
-  "Maintains a list of all buffers not associated with files")
+  "Maintains a list of all buffers not associated with files.")
 
 (defvar staple--file-buffers '()
-  "Maintains a list of all buffers that are associated to files")
+  "Maintains a list of all buffers that are associated to files.")
 
 ;;; Helper functions
 
@@ -125,7 +202,7 @@ See Info node `(emacs) Regexps' or Info node `(elisp) Regular Expressions'"
 ;; END
 
 (defun staple--kill-other-buffers ()
-  "Kill all other buffers. 
+  "Kill all other buffers.
 Taken from EmacsWiki: https://www.emacswiki.org/emacs/KillingBuffers#toc2"
   (mapc 'kill-buffer (delq (current-buffer) (buffer-list))))
 
@@ -171,13 +248,20 @@ Uses `staple-init-multiple-window-strategy' to determine how to organize."
     ('prompt (staple--prompt))))
 
 (defun staple--init ()
+  "Initialized staple.
+
+Sort all buffers into the file-buffer or special-buffer lists.
+Then, call `staple--organize-buffers' to sort all file-buffers."
   (dolist (buffer (buffer-list))
     (if (buffer-file-name buffer)
         (add-to-list 'staple--file-buffers buffer)
         (add-to-list 'staple--special-buffers buffer)))
   (staple--organize-buffers))
 
-(defun staple--exit ())
+(defun staple--exit ()
+  "Cleans up when command `staple-mode' is turned off."
+  (setf staple--special-buffers nil
+        staple--file-buffers nil))
 
 (defun staple--new-buffer-fun ()
   "Add any new buffers to their appropriate list when opened.
@@ -194,28 +278,20 @@ Uses `staple-init-multiple-window-strategy' to determine how to organize."
 
 ;;; Public and Interactive functions
 
-(define-minor-mode staple-mode
-  ""
-  :init-value nil
-  :global t
-  (if staple-mode
-      (staple--exit)
-      (staple--init)))
-
 (defun staple-next-buffer (&optional window)
-  "Moves to the next buffer that's been stapled to the current window.
+  "Move to the next buffer that's been stapled to the current window.
 if WINDOW is not provided, do it for the current window."
   (interactive)
   (error "Not implemented yet!"))
 
 (defun staple-previous-buffer (&optional window)
-  "Moves to the previous buffer that's been stapled to the current window.
+  "Move to the previous buffer that's been stapled to the current window.
 if WINDOW is not provided, do it for the current window."
   (interactive)
   (error "Not implemented yet!"))
 
 (defun staple-kill-window (&optional window)
-  "Kills the WINDOW and all buffers inside of it. 
+  "Kill the WINDOW and all buffers inside of it.
 If WINDOW is not provided, kill the current window"
   (interactive)
   (error "Not implemented yet!"))
