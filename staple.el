@@ -174,15 +174,19 @@ See Info node `(emacs) Regexps' or Info node `(elisp) Regular Expressions'"
   :type '(repeat string)
   :risky t)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Private variables
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defvar staple--special-buffers '()
   "Maintains a list of all buffers not associated with files.")
 
 (defvar staple--file-buffers '()
-  "Maintains a list of all buffers that are associated to files.")
+  "Maintains a list of all file-buffers and the window they're stapled to.")
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helper functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; BEGIN: copied from winum
 (defun staple--list-windows-in-frame (&optional f)
@@ -303,7 +307,9 @@ Then, call `staple--organize-buffers' to sort all file-buffers."
       (when (member buffer sorted-buffers)
         (message (buffer-file-name buffer))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Public and Interactive functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun staple-next-buffer (&optional window)
   "Move to the next buffer that's been stapled to the current window.
