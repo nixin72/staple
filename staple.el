@@ -224,44 +224,50 @@ See Info node `(emacs) Regexps' or Info node `(elisp) Regular Expressions'"
 Taken from EmacsWiki: https://www.emacswiki.org/emacs/KillingBuffers#toc2"
   (mapc 'kill-buffer (delq (current-buffer) (buffer-list))))
 
-(defun staple--split-evently ()
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Multiple window strategies ;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; TODO
+(defun staple--strat-split-evently ()
   "Will split all the buffers evenly across the open windows."
   (let* ((windows (staple--window-list))
          (buffers (buffer-list))
          (count (length buffers)))
        ()))
 
-(defun staple--group-by-projects ()
+;;; TODO
+(defun staple--strat-group-by-projects ()
   "Will group the buffers together by project.
 The number of projects will be split as evenly as possible among windows."
   (error "Not implemented yet"))
 
-(defun staple--group-by-extension ()
+;;; TODO
+(defun staple--strat-group-by-extension ()
   "Will group the buffers together by extension.
 The number of extensions will be split as evenly as possible among windows."
   (error "Not implemented yet"))
 
-(defun staple--kill-other-buffers ()
+(defun staple--strat-kill-other-buffers ()
   "Will simply kill all other buffers and windows.
 Once killed, it will staple the current buffer to the current window."
-  (staple--kill-other-buffers))
+  (staple--kill-other-buffers)
+  (delete-other-windows)
+  (staple--staple (car staple--file-buffers) (selected-window)))
 
-(defun staple--kill-other-windows ()
+(defun staple--strat-kill-other-windows ()
   "Will kill all other windows.  It will staple all buffers to the one window."
   (delete-other-windows)
-  (let ((buffers (buffer-list)))))
+  (let ((window (selected-window)))
+    (dolist (buffer (buffer-list))
+      (when (buffer-file-name buffer)
+        (staple--staple buffer window)))))
 
-
-(defun staple--to-window (buffer window)
-  "Staples BUFFER to WINDOW."
-  ())
-
-(defun staple--prompt ()
+(defun staple--strat-prompt ()
   "Prompts user to enter an organization method from a list of options.
 Then re-calls `staple--organize-buffers' with the new organization method."
-  (let* ((choices '(split-evenly      close-windows
-                    group-by-projects group-by-extension
-                    close-other-buffers))
+  (let* ((choices '(kill-other-buffers kill-other-windows
+                    group-by-projects  group-by-extension
+                    split-evenly))
          (choice
            (completing-read "Enter organization strategy:" choices)))
        (staple--organize-buffers (make-symbol choice))))
@@ -271,28 +277,61 @@ Then re-calls `staple--organize-buffers' with the new organization method."
 Uses `staple-init-multiple-window-strategy' to determine how to organize."
   (pcase (or strategy
              staple-init-multiple-window-strategy)
-    ('split-evenly (staple--group-evenly))
-    ('group-by-project (staple--group-by-project))
-    ('group-by-extension (staple--group-by-extension))
-    ('kill-other-buffers (staple--kill-other-buffers))
-    ('kill-other-windows (staple--kill-other-windows))
-    ('prompt (staple--prompt))))
+    ('split-evenly (staple--strat-group-evenly))
+    ('group-by-project (staple--strat-group-by-project))
+    ('group-by-extension (staple--strat-group-by-extension))
+    ('kill-other-buffers (staple--strat-kill-other-buffers))
+    ('kill-other-windows (staple--strat-kill-other-windows))
+    ('prompt (staple--strat-prompt))))
+
+(setf staple-init-multiple-window-strategy 'prompt)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Core logic and startup ;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; TODO
+(defun staple--staple (buffer window)
+  "Staples BUFFER to WINDOW."
+  (let ((found nil))
+    (dolist (window-buffers staple--file-buffers)
+      (when (equal (car window-buffers) window)
+        (setf window-buffers (append window-buffers buffer))
+        (setf found t)))
+    (unless found
+      (add-to-list 'staple--file-buffers (list window buffer)))))
+
+;;; TODO
+(defun staple--unstaple (buffer window)
+  "Unstaples BUFFER from WINDOW."
+  (dolist (window-buffers staple--file-buffers)
+    (when (equal (car window-buffers) window)
+      (setf window-buffers (delete buffer window-buffers)))))
+
+(defun staple--move-buffer (buffer from to)
+  "Unstaples a BUFFER FROM a window, then staples is TO another window."
+  (staple--unstaple buffer from)
+  (staple--staple buffer to))
 
 (defun staple--init ()
   "Initialized staple.
 
 Sort all buffers into the file-buffer or special-buffer lists.
 Then, call `staple--organize-buffers' to sort all file-buffers."
+  (staple--organize-buffers)
   (dolist (buffer (buffer-list))
-    (if (buffer-file-name buffer)
-        (add-to-list 'staple--file-buffers buffer)
-        (add-to-list 'staple--special-buffers buffer)))
-  (staple--organize-buffers))
+    (unless (buffer-file-name buffer)
+        (add-to-list 'staple--special-buffers buffer))))
 
 (defun staple--exit ()
   "Cleans up when command `staple-mode' is turned off."
   (setf staple--special-buffers nil
         staple--file-buffers nil))
+
+(defun staple--move-buffer-dir (dir)
+  (let ((buffer (current-buffer))
+        (from (selected-window))
+        (to (window-in-direction dir)))
+    (staple--move-buffer buffer from to)))
 
 (defun staple--new-buffer-fun ()
   "Add any new buffers to their appropriate list when opened.
@@ -338,22 +377,22 @@ if BUFFER is not provided, do it for the current buffer."
 (defun staple-move-buffer-up ()
   "Staples a buffer to window above the current window."
   (interactive)
-  (error "Not implemented yet!"))
+  (staple--move-buffer-dir 'above))
 
 (defun staple-move-buffer-left ()
   "Staples a buffer to window on the left of the current window."
   (interactive)
-  (error "Not implemented yet!"))
+  (staple--move-buffer-dir 'left))
 
 (defun staple-move-buffer-down ()
   "Staples a buffer to window below the current window."
   (interactive)
-  (error "Not implemented yet!"))
+  (staple--move-buffer-dir 'below))
 
 (defun staple-move-buffer-right ()
   "Staples a buffer to window on the right of the current window."
   (interactive)
-  (error "Not implemented yet!"))
+  (staple--move-buffer-dir 'right))
 
 (defun staple-list-buffers (&optional window)
   "Lists all the buffers stapled to the current window.
