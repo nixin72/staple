@@ -217,29 +217,42 @@ Taken from EmacsWiki: https://www.emacswiki.org/emacs/KillingBuffers#toc2"
        ()))
 
 (defun staple--group-by-projects ()
+  "Will group the buffers together by project.
+The number of projects will be split as evenly as possible among windows."
   (error "Not implemented yet"))
 
 (defun staple--group-by-extension ()
+  "Will group the buffers together by extension.
+The number of extensions will be split as evenly as possible among windows."
   (error "Not implemented yet"))
 
 (defun staple--kill-other-buffers ()
+  "Will simply kill all other buffers and windows.
+Once killed, it will staple the current buffer to the current window."
   (staple--kill-other-buffers))
 
 (defun staple--kill-other-windows ()
-  (delete-other-windows))
+  "Will kill all other windows.  It will staple all buffers to the one window."
+  (delete-other-windows)
+  (let ((buffers (buffer-list)))))
+
+
+(defun staple--to-window (buffer window)
+  "Staples BUFFER to WINDOW."
+  ())
 
 (defun staple--prompt ()
-  "Organization function to run when staple wants you to prompt for your 
-organization method each time."
-  (let* ((choices '(split-50/05       close-windows
+  "Prompts user to enter an organization method from a list of options.
+Then re-calls `staple--organize-buffers' with the new organization method."
+  (let* ((choices '(split-evenly      close-windows
                     group-by-projects group-by-extension
-                    close-other-buffers))           
+                    close-other-buffers))
          (choice
            (completing-read "Enter organization strategy:" choices)))
        (staple--organize-buffers (make-symbol choice))))
 
 (defun staple--organize-buffers (&optional strategy)
-  "Staples buffers to a window given an organization strategy. 
+  "Staples buffers to a window given an organization STRATEGY.
 Uses `staple-init-multiple-window-strategy' to determine how to organize."
   (pcase (or strategy
              staple-init-multiple-window-strategy)
@@ -325,4 +338,12 @@ if BUFFER is not provided, do it for the current buffer."
   (interactive)
   (error "Not implemented yet!"))
 
-;(add-hook 'buffer-list-update-hook 'run-fun)
+(defun staple-list-buffers (&optional window)
+  "Lists all the buffers stapled to the current window.
+If WINDOW is non-nil, list buffers stapled to that window instead."
+  (interactive)
+  (error "Not implementated yet!"))
+
+(provide 'staple)
+
+;;; staple.el ends here
