@@ -116,31 +116,42 @@
   :init-value nil
   :global t
   (if staple-mode
-      (staple--exit)
-      (staple--init)))
+      (staple--init)
+      (staple--exit)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Customization options
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defgroup staple nil
   "Customization options for `staple-mode'."
   :group 'environment)
 
-(defcustom staple-init-multiple-window-strategy 'split-evenly
+(defcustom staple-init-multiple-window-strategy 'kill-other-windows
   "Sorting method to use when command `staple-mode' is called.
 
 These strategies are used when command `staple-mode' starts and theres more than
 one window open, so this helps dictate how to staple the existing file buffers
-to the given window.
+to the given window."
+  :group 'staple
+  :type '(choice
+          (const :tag "Split evenly" split-evenly)
+          (const :tag "Group by projects" group-by-projects)
+          (const :tag "Group by extensions" group-by-extensions)
+          (const :tag "Kill other buffers" kill-other-buffers)
+          (const :tag "Kill other windows" kill-other-windows)
+          (const :tag "prompt" prompt)))
 
-Possible values:
-- split-evenly
-- group-by-projects
-- group-by-extension
-- kill-other-buffers
-- kill-other-windows
-- prompt"
-  :type 'symbol
-  :group 'staple)
+(setq staple-init-multiple-window-strategy 'kill-other-windows)
 
+(defcustom staple-special-window-dock-side 'below
+  "The side of the frame that the special window should dock to."
+  :group 'staple
+  :type '(choice
+           (const :tag "Above" above)
+           (const :tag "Below" below)
+           (const :tag "Left" left)
+           (const :tag "Right" right)))
 
 ;; Copied from winum
 (defcustom staple-scope 'global
