@@ -37,6 +37,7 @@
 ;; 
 ;; For example, if we have 4 buffers named buffer-1 through buffer-4, and the
 ;; following layout:
+;;
 ;; +--------------------------+--------------------------+
 ;; | Window-1                 | Window-2                 |
 ;; |                          |                          |
@@ -45,7 +46,9 @@
 ;; |                          |                          |
 ;; |                          |                          |
 ;; |                          |                          |
+;; |                          |                          |
 ;; |  Buffer-1 contents here  |  Buffer-3 contents here  |
+;; |                          |                          |
 ;; |                          |                          |
 ;; |                          |                          |
 ;; |                          |                          |
